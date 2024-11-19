@@ -1,0 +1,52 @@
+{
+  "name": "micro-sr25519",
+  "version": "0.1.0",
+  "description": "Minimal implementation of sr25519 (polkadot) cryptography, with Merlin and Strobe",
+  "files": [
+    "lib",
+    "index.ts"
+  ],
+  "main": "lib/index.js",
+  "module": "lib/esm/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/esm/index.js",
+      "default": "./lib/index.js"
+    }
+  },
+  "browser": {
+    "crypto": false
+  },
+  "dependencies": {
+    "@noble/curves": "~1.6.0",
+    "@noble/hashes": "~1.5.0"
+  },
+  "devDependencies": {
+    "@paulmillr/jsbt": "0.2.1",
+    "micro-bmark": "0.3.1",
+    "micro-should": "0.4.0",
+    "prettier": "3.3.2",
+    "typescript": "5.5.2"
+  },
+  "author": "Paul Miller (https://paulmillr.com)",
+  "license": "MIT",
+  "homepage": "https://github.com/paulmillr/scure-sr25519",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulmillr/scure-sr25519.git"
+  },
+  "scripts": {
+    "build": "tsc && tsc -p tsconfig.esm.json",
+    "bench": "cd test/benchmark; npm i; node index.js",
+    "lint": "prettier --check index.ts test/*.test.js",
+    "format": "prettier --write index.ts test/*.test.js",
+    "test": "node test/index.test.js"
+  },
+  "keywords": [
+    "sr25519",
+    "polkadot"
+  ],
+  "funding": "https://paulmillr.com/funding/"
+}
