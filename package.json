@@ -11,17 +11,13 @@
   "types": "lib/index.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/index.d.ts",
       "import": "./lib/esm/index.js",
-      "default": "./lib/index.js"
+      "require": "./lib/index.js"
     }
   },
-  "browser": {
-    "crypto": false
-  },
   "dependencies": {
-    "@noble/curves": "~1.6.0",
-    "@noble/hashes": "~1.5.0"
+    "@noble/curves": "~1.7.0",
+    "@noble/hashes": "~1.6.0"
   },
   "devDependencies": {
     "@paulmillr/jsbt": "0.2.1",
@@ -30,6 +26,7 @@
     "prettier": "3.3.2",
     "typescript": "5.5.2"
   },
+  "sideEffects": false,
   "author": "Paul Miller (https://paulmillr.com)",
   "license": "MIT",
   "homepage": "https://github.com/paulmillr/scure-sr25519",

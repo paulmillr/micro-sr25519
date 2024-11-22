@@ -1,4 +1,4 @@
-import {  should } from 'micro-should';
+import { should } from 'micro-should';
 import './basic.test.js';
 
 // ESM is broken.
