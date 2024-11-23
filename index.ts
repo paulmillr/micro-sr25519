@@ -12,6 +12,13 @@ import {
 import { keccakP } from '@noble/hashes/sha3';
 import { mod } from '@noble/curves/abstract/modular';
 
+// Minimal JS implementation of sr25519 cryptography for Polkadot.
+//
+// https://wiki.polkadot.network/docs/learn-cryptography
+// Uses [Merlin](https://merlin.cool/index.html),
+// a transcript construction, built on [Strobe](https://strobe.sourceforge.io).
+// Merlin ensures two parties agree on the same state when communicating.
+
 // prettier-ignore
 const _0n = BigInt(0), _3n = BigInt(3);
 
