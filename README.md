@@ -53,7 +53,7 @@ const signature = sr25519.vrf.sign(msg, pair.secretKey);
 const isValid = sr25519.vrf.verify(msg, sig, pair.publicKey);
 ```
 
-### Migration from '@polkadot/utils-crypto'
+### Migration from `@polkadot/utils-crypto`
 
 - most derive methods in original return `{publicKey, privateKey}`, we always return only privateKey,
   you can get publicKey via `getPublicKey`
