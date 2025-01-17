@@ -41,7 +41,7 @@
     "format": "prettier --write index.ts test/*.test.js",
     "test": "node test/index.js",
     "test:bun": "bun test/index.js",
-    "test:deno": "bun --allow-env --allow-read test/index.js"
+    "test:deno": "deno --allow-env --allow-read test/index.js"
   },
   "keywords": [
     "sr25519",
