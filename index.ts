@@ -1,23 +1,25 @@
-import { concatBytes, utf8ToBytes, u32, randomBytes } from '@noble/hashes/utils';
-import { ed25519, RistrettoPoint } from '@noble/curves/ed25519';
-import { sha512 } from '@noble/hashes/sha512';
+/**
+ * Minimal JS implementation of sr25519 cryptography for Polkadot.
+ *
+ * Uses [Merlin](https://merlin.cool/index.html),
+ * a transcript construction, built on [Strobe](https://strobe.sourceforge.io).
+ * Merlin ensures two parties agree on the same state when communicating.
+ *
+ * More: https://wiki.polkadot.network/docs/learn-cryptography.
+ */
+import { mod } from '@noble/curves/abstract/modular';
 import {
-  bytesToNumberLE,
-  numberToBytesLE,
-  isBytes,
   aInRange,
   bitMask,
+  bytesToNumberLE,
   equalBytes,
+  isBytes,
+  numberToBytesLE,
 } from '@noble/curves/abstract/utils';
+import { ed25519, RistrettoPoint } from '@noble/curves/ed25519';
 import { keccakP } from '@noble/hashes/sha3';
-import { mod } from '@noble/curves/abstract/modular';
-
-// Minimal JS implementation of sr25519 cryptography for Polkadot.
-//
-// https://wiki.polkadot.network/docs/learn-cryptography
-// Uses [Merlin](https://merlin.cool/index.html),
-// a transcript construction, built on [Strobe](https://strobe.sourceforge.io).
-// Merlin ensures two parties agree on the same state when communicating.
+import { sha512 } from '@noble/hashes/sha512';
+import { concatBytes, randomBytes, u32, utf8ToBytes } from '@noble/hashes/utils';
 
 // prettier-ignore
 const _0n = BigInt(0), _3n = BigInt(3);
