@@ -54,6 +54,14 @@ const modN = (n: bigint) => mod(n, CURVE_ORDER);
 // - https://strobe.sourceforge.io/specs/
 // We can implement full version, but seems nobody uses this much.
 const STROBE_R: number = 166;
+// const Flags2 = {
+//   I: 1,
+//   A: 1 << 1,
+//   C: 1 << 2,
+//   T: 1 << 3,
+//   M: 1 << 4,
+//   K: 1 << 5,
+// } as const;
 const enum Flags {
   I = 1,
   A = 1 << 1,
@@ -65,7 +73,7 @@ const enum Flags {
 // TODO: this is very close to KeccakPRG, try to merge?
 // Differences: suffix, additional methods/flags
 export class Strobe128 {
-  state = new Uint8Array(200);
+  state: Uint8Array = new Uint8Array(200);
   state32: Uint32Array;
   pos: number = 0;
   posBegin: number = 0;
@@ -148,7 +156,7 @@ export class Strobe128 {
     this.overwrite(toData(data));
   }
   // Utils
-  clone() {
+  clone(): Strobe128 {
     const n = new Strobe128('0'); // tmp
     n.pos = this.pos;
     n.posBegin = this.posBegin;
@@ -167,15 +175,15 @@ export class Merlin {
     this.strobe = new Strobe128('Merlin v1.0');
     this.appendMessage('dom-sep', label);
   }
-  appendMessage(label: Data, message: Data) {
+  appendMessage(label: Data, message: Data): void {
     this.strobe.metaAD(label, false);
     this.strobe.metaAD(numberToBytesLE(message.length, 4), true);
     this.strobe.AD(message, false);
   }
-  appendU64(label: Data, n: number | bigint) {
+  appendU64(label: Data, n: number | bigint): void {
     this.appendMessage(label, numberToBytesLE(n, 8));
   }
-  challengeBytes(label: Data, len: number) {
+  challengeBytes(label: Data, len: number): Uint8Array {
     this.strobe.metaAD(label, false);
     this.strobe.metaAD(numberToBytesLE(len, 4), true);
     return this.strobe.PRF(len, false);
@@ -190,26 +198,26 @@ export class SigningContext extends Merlin {
   ) {
     super(name);
   }
-  label(label: Data) {
+  label(label: Data): void {
     this.appendMessage('', label);
   }
-  bytes(bytes: Uint8Array) {
+  bytes(bytes: Uint8Array): this {
     this.appendMessage('sign-bytes', bytes);
     return this;
   }
-  protoName(label: Data) {
+  protoName(label: Data): void {
     this.appendMessage('proto-name', label);
   }
-  commitPoint(label: Data, point: Point) {
+  commitPoint(label: Data, point: Point): void {
     this.appendMessage(label, point.toRawBytes());
   }
   challengeScalar(label: Data): bigint {
     return modN(bytesToNumberLE(this.challengeBytes(label, 64)));
   }
-  witnessScalar(label: Data, nonceSeeds: Uint8Array[] = []) {
+  witnessScalar(label: Data, nonceSeeds: Uint8Array[] = []): bigint {
     return modN(bytesToNumberLE(this.witnessBytes(label, 64, nonceSeeds)));
   }
-  witnessBytes(label: Data, len: number, nonceSeeds: Uint8Array[] = []) {
+  witnessBytes(label: Data, len: number, nonceSeeds: Uint8Array[] = []): Uint8Array {
     const strobeRng = this.strobe.clone();
     for (const ns of nonceSeeds) {
       strobeRng.metaAD(label, false);
@@ -232,7 +240,7 @@ const encodeScalar = (n: bigint) => numberToBytesLE((n << _3n) & MASK, 32);
 const decodeScalar = (n: Uint8Array) => bytesToNumberLE(n) >> _3n;
 
 // NOTE: secretKey is 64 bytes (key + nonce). This required for HDKD, since key can be derived not only from seed, but from other keys.
-export function getPublicKey(secretKey: Uint8Array) {
+export function getPublicKey(secretKey: Uint8Array): Uint8Array {
   abytes('secretKey', secretKey, 64);
   const scalar = decodeScalar(secretKey.subarray(0, 32));
   return RistrettoPoint.BASE.multiply(scalar).toRawBytes();
@@ -251,7 +259,7 @@ export function secretFromSeed(seed: Uint8Array): Uint8Array {
 }
 // Seems like ed25519 keypair? Generates keypair from other keypair in ed25519 format
 // NOTE: not exported from wasm. Do we need this at all?
-export function fromKeypair(pair: Uint8Array) {
+export function fromKeypair(pair: Uint8Array): Uint8Array {
   abytes('keypair', pair, 96);
   const sk = pair.slice(0, 32);
   const nonce = pair.slice(32, 64);
@@ -264,7 +272,11 @@ export function fromKeypair(pair: Uint8Array) {
 
 // Basic sign. NOTE: context is currently constant. Please open issue if you need different one.
 const SUBSTRATE_CONTEXT = utf8ToBytes('substrate');
-export function sign(secretKey: Uint8Array, message: Uint8Array, rng = randomBytes) {
+export function sign(
+  secretKey: Uint8Array,
+  message: Uint8Array,
+  rng: typeof randomBytes = randomBytes
+): Uint8Array {
   abytes('message', message);
   abytes('secretKey', secretKey, 64);
   const t = new SigningContext('SigningContext', rng);
@@ -284,7 +296,7 @@ export function sign(secretKey: Uint8Array, message: Uint8Array, rng = randomByt
   res[63] |= 128; // add Schnorrkel marker
   return res;
 }
-export function verify(message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) {
+export function verify(message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array): boolean {
   abytes('message', message);
   abytes('signature', signature, 64);
   abytes('publicKey', publicKey, 32);
@@ -306,7 +318,7 @@ export function verify(message: Uint8Array, signature: Uint8Array, publicKey: Ui
   const RR = pubPoint.negate().multiply(k).add(sP);
   return RR.equals(R);
 }
-export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array) {
+export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
   abytes('secretKey', secretKey, 64);
   abytes('publicKey', publicKey, 32);
   const keyScalar = decodeScalar(secretKey.subarray(0, 32));
@@ -316,7 +328,11 @@ export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array) {
 
 // Derive
 export const HDKD = {
-  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng = randomBytes) {
+  secretSoft(
+    secretKey: Uint8Array,
+    chainCode: Uint8Array,
+    rng: typeof randomBytes = randomBytes
+  ): Uint8Array {
     abytes('secretKey', secretKey, 64);
     abytes('chainCode', chainCode, 32);
     const masterScalar = decodeScalar(secretKey.subarray(0, 32));
@@ -335,7 +351,7 @@ export const HDKD = {
     const key = encodeScalar(modN(masterScalar + scalar));
     return concatBytes(key, nonce);
   },
-  publicSoft(publicKey: Uint8Array, chainCode: Uint8Array) {
+  publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
     abytes('publicKey', publicKey, 32);
     abytes('chainCode', chainCode, 32);
     const pubPoint = RistrettoPoint.fromHex(publicKey);
@@ -347,7 +363,7 @@ export const HDKD = {
     t.challengeBytes('HDKD-chaincode', 32);
     return pubPoint.add(RistrettoPoint.BASE.multiply(scalar)).toRawBytes();
   },
-  secretHard(secretKey: Uint8Array, chainCode: Uint8Array) {
+  secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
     abytes('secretKey', secretKey, 64);
     abytes('chainCode', chainCode, 32);
     const key = numberToBytesLE(decodeScalar(secretKey.subarray(0, 32)), 32);
@@ -416,7 +432,13 @@ function initVRF(
   return { input, t: transcript };
 }
 export const vrf = {
-  sign(msg: Uint8Array, secretKey: Uint8Array, ctx = EMPTY, extra = EMPTY, rng = randomBytes) {
+  sign(
+    msg: Uint8Array,
+    secretKey: Uint8Array,
+    ctx: Uint8Array = EMPTY,
+    extra: Uint8Array = EMPTY,
+    rng: typeof randomBytes = randomBytes
+  ): Uint8Array {
     abytes('msg', msg);
     abytes('secretKey', secretKey, 64);
     abytes('ctx', ctx);
@@ -438,10 +460,10 @@ export const vrf = {
     msg: Uint8Array,
     signature: Uint8Array,
     publicKey: Uint8Array,
-    ctx = EMPTY,
-    extra = EMPTY,
-    rng = randomBytes
-  ) {
+    ctx: Uint8Array = EMPTY,
+    extra: Uint8Array = EMPTY,
+    rng: typeof randomBytes = randomBytes
+  ): boolean {
     abytes('msg', msg);
     abytes('signature', signature, 96); // O(point) || c(scalar) || s(scalar)
     abytes('pubkey', publicKey, 32);
@@ -462,7 +484,11 @@ export const vrf = {
 };
 
 // NOTE: for tests only, don't use
-export const __tests = {
+export const __tests: {
+  Strobe128: typeof Strobe128;
+  Merlin: typeof Merlin;
+  SigningContext: typeof SigningContext;
+} = {
   Strobe128,
   Merlin,
   SigningContext,
