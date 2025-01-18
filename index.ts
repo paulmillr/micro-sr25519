@@ -26,7 +26,7 @@ const _0n = BigInt(0), _3n = BigInt(3);
 
 type Point = typeof RistrettoPoint.BASE;
 type Data = string | Uint8Array;
-type RNG = typeof randomBytes;
+export type RNG = (bytes: number) => Uint8Array;
 
 function toData(d: Data): Uint8Array {
   if (typeof d === 'string') return utf8ToBytes(d);
@@ -275,7 +275,7 @@ const SUBSTRATE_CONTEXT = utf8ToBytes('substrate');
 export function sign(
   secretKey: Uint8Array,
   message: Uint8Array,
-  rng: typeof randomBytes = randomBytes
+  rng: RNG = randomBytes
 ): Uint8Array {
   abytes('message', message);
   abytes('secretKey', secretKey, 64);
@@ -327,12 +327,12 @@ export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): U
 }
 
 // Derive
-export const HDKD = {
-  secretSoft(
-    secretKey: Uint8Array,
-    chainCode: Uint8Array,
-    rng: typeof randomBytes = randomBytes
-  ): Uint8Array {
+export const HDKD: {
+  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng: RNG): Uint8Array;
+  publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
+  secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
+} = {
+  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng: RNG = randomBytes): Uint8Array {
     abytes('secretKey', secretKey, 64);
     abytes('chainCode', chainCode, 32);
     const masterScalar = decodeScalar(secretKey.subarray(0, 32));
@@ -420,7 +420,7 @@ function initVRF(
   msg: Uint8Array,
   extra: Uint8Array,
   pubPoint: Point,
-  rng = randomBytes
+  rng: RNG = randomBytes
 ) {
   const t = new SigningContext('SigningContext', rng);
   t.label(ctx);
@@ -431,13 +431,29 @@ function initVRF(
   if (extra.length) transcript.label(extra);
   return { input, t: transcript };
 }
-export const vrf = {
+export const vrf: {
+  sign(
+    msg: Uint8Array,
+    secretKey: Uint8Array,
+    ctx: Uint8Array,
+    extra: Uint8Array,
+    rng: RNG
+  ): Uint8Array;
+  verify(
+    msg: Uint8Array,
+    signature: Uint8Array,
+    publicKey: Uint8Array,
+    ctx?: Uint8Array,
+    extra?: Uint8Array,
+    rng?: RNG
+  ): boolean;
+} = {
   sign(
     msg: Uint8Array,
     secretKey: Uint8Array,
     ctx: Uint8Array = EMPTY,
     extra: Uint8Array = EMPTY,
-    rng: typeof randomBytes = randomBytes
+    rng: RNG = randomBytes
   ): Uint8Array {
     abytes('msg', msg);
     abytes('secretKey', secretKey, 64);
@@ -462,7 +478,7 @@ export const vrf = {
     publicKey: Uint8Array,
     ctx: Uint8Array = EMPTY,
     extra: Uint8Array = EMPTY,
-    rng: typeof randomBytes = randomBytes
+    rng: RNG = randomBytes
   ): boolean {
     abytes('msg', msg);
     abytes('signature', signature, 96); // O(point) || c(scalar) || s(scalar)
