@@ -1,6 +1,6 @@
 {
   "name": "micro-sr25519",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimal implementation of sr25519 (polkadot) cryptography, with Merlin and Strobe",
   "files": [
     "lib",
