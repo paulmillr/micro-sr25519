@@ -54,22 +54,22 @@ const modN = (n: bigint) => mod(n, CURVE_ORDER);
 // - https://strobe.sourceforge.io/specs/
 // We can implement full version, but seems nobody uses this much.
 const STROBE_R: number = 166;
-// const Flags2 = {
-//   I: 1,
-//   A: 1 << 1,
-//   C: 1 << 2,
-//   T: 1 << 3,
-//   M: 1 << 4,
-//   K: 1 << 5,
-// } as const;
-const enum Flags {
-  I = 1,
-  A = 1 << 1,
-  C = 1 << 2,
-  T = 1 << 3,
-  M = 1 << 4,
-  K = 1 << 5,
-}
+const Flags = {
+  I: 1,
+  A: 1 << 1,
+  C: 1 << 2,
+  T: 1 << 3,
+  M: 1 << 4,
+  K: 1 << 5,
+} as const;
+// const enum Flags {
+//   I = 1,
+//   A = 1 << 1,
+//   C = 1 << 2,
+//   T = 1 << 3,
+//   M = 1 << 4,
+//   K = 1 << 5,
+// }
 // TODO: this is very close to KeccakPRG, try to merge?
 // Differences: suffix, additional methods/flags
 export class Strobe128 {
@@ -192,11 +192,10 @@ export class Merlin {
 // /Merlin
 // Merlin signging context/transcript (sr25519 specific stuff, Merlin and Strobe are generic (but minimal))
 export class SigningContext extends Merlin {
-  constructor(
-    name: string,
-    private rng: RNG = randomBytes
-  ) {
+  private rng: RNG;
+  constructor(name: string, rng: RNG = randomBytes) {
     super(name);
+    this.rng = rng;
   }
   label(label: Data): void {
     this.appendMessage('', label);
