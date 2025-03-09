@@ -327,7 +327,7 @@ export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): U
 
 // Derive
 export const HDKD: {
-  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng: RNG): Uint8Array;
+  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng?: RNG): Uint8Array;
   publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
   secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
 } = {
