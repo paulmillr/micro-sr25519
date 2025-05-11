@@ -1,9 +1,9 @@
-import * as sr25519 from '../lib/esm/index.js';
 import * as ed25519 from '@noble/curves/ed25519';
+import * as sr25519 from '../lib/esm/index.js';
 
+import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 import { describe, should } from 'micro-should';
 import { deepStrictEqual, notDeepStrictEqual, throws } from 'node:assert';
-import { bytesToHex, hexToBytes, utf8ToBytes, concatBytes } from '@noble/hashes/utils';
 
 const { Strobe128, Merlin, SigningContext } = sr25519.__tests;
 const ZeroRNG = (n) => new Uint8Array(n);
@@ -380,9 +380,9 @@ describe('sr25519', () => {
       deepStrictEqual(sr25519.vrf.verify(msg2, out3, pub, ctx, extra), true);
     });
     should('no extra', () => {
-      const out = sr25519.vrf.sign(msg, priv, ctx, new Uint8Array());
+      const out = sr25519.vrf.sign(msg, priv, ctx, Uint8Array.of());
       const pub = sr25519.getPublicKey(priv);
-      deepStrictEqual(sr25519.vrf.verify(msg, out, pub, ctx, new Uint8Array()), true);
+      deepStrictEqual(sr25519.vrf.verify(msg, out, pub, ctx, Uint8Array.of()), true);
       deepStrictEqual(sr25519.vrf.verify(msg, out, pub, ctx, extra), false);
     });
     should('errors', () => {

@@ -41,7 +41,7 @@ function abytes(title: string, b: Uint8Array, ...lengths: number[]) {
       `${title}: Uint8Array expected of length ${lengths}, not of length=${b.length}`
     );
 }
-const EMPTY = new Uint8Array();
+const EMPTY = Uint8Array.of();
 const CURVE_ORDER = ed25519.CURVE.n;
 function parseScalar(title: string, bytes: Uint8Array) {
   abytes(title, bytes, 32);
