@@ -64,39 +64,38 @@ const isValid = sr25519.vrf.verify(msg, sig, pair.publicKey);
 
 The library has not been independently audited yet. Use at your own risk.
 
+Low-level operations are done using noble-curves and noble-hashes.
+Consult their README for more information about constant-timeness, memory dumping and supply chain security.
+
+
 ## Speed
 
-Benchmark results on Apple M2 with node v22:
+Benchmark results on Apple M4:
 
 ```
-sr25519
-secretFromSeed
-├─wasm x 15,323 ops/sec @ 65μs/op
-└─micro x 116,509 ops/sec @ 8μs/op
-getSharedSecret
-├─wasm x 4,516 ops/sec @ 221μs/op
-└─micro x 799 ops/sec @ 1ms/op
-HDKD.secretHard
-├─wasm x 11,930 ops/sec @ 83μs/op
-└─micro x 26,340 ops/sec @ 37μs/op
-HDKD.secretSoft
-├─wasm x 12,147 ops/sec @ 82μs/op
-└─micro x 2,756 ops/sec @ 362μs/op
-HDKD.publicSoft
-├─wasm x 12,627 ops/sec @ 79μs/op
-└─micro x 3,134 ops/sec @ 319μs/op
-sign
-├─wasm x 12,223 ops/sec @ 81μs/op
-└─micro x 1,741 ops/sec @ 574μs/op
-verify
-├─wasm x 5,085 ops/sec @ 196μs/op
-└─micro x 669 ops/sec @ 1ms/op
-vrfSign
-├─wasm x 1,847 ops/sec @ 541μs/op
-└─micro x 313 ops/sec @ 3ms/op
-vrfVerify
-├─wasm x 2,181 ops/sec @ 458μs/op
-└─micro x 243 ops/sec @ 4ms/op
+secretFromSeed x 493,827 ops/sec @ 2μs/op ± 1.37% (1μs..651μs)
+getSharedSecret x 1,135 ops/sec @ 880μs/op
+HDKD.secretHard x 54,121 ops/sec @ 18μs/op
+HDKD.secretSoft x 4,108 ops/sec @ 243μs/op
+HDKD.publicSoft x 4,499 ops/sec @ 222μs/op
+sign x 2,475 ops/sec @ 403μs/op
+verify x 955 ops/sec @ 1ms/op
+vrfSign x 442 ops/sec @ 2ms/op
+vrfVerify x 344 ops/sec @ 2ms/op
+```
+
+Comparison with wasm:
+
+```
+secretFromSeed wasm x 21,615 ops/sec @ 46μs/op
+getSharedSecret wasm x 6,681 ops/sec @ 149μs/op
+HDKD.secretHard wasm x 16,958 ops/sec @ 58μs/op
+HDKD.secretSoft wasm x 16,075 ops/sec @ 62μs/op
+HDKD.publicSoft wasm x 16,981 ops/sec @ 58μs/op
+sign wasm x 16,559 ops/sec @ 60μs/op
+verify wasm x 6,741 ops/sec @ 148μs/op
+vrfSign wasm x 2,470 ops/sec @ 404μs/op
+vrfVerify wasm x 2,917 ops/sec @ 342μs/op
 ```
 
 ## Contributing & testing

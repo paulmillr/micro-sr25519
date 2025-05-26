@@ -1,14 +1,18 @@
-import { run, mark, utils, compare } from 'micro-bmark';
+import { mark } from 'micro-bmark';
 import { hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 import * as sr25519 from '../../lib/esm/index.js';
 import * as polka from '@polkadot/util-crypto';
 import { deepStrictEqual } from 'assert';
 
-run(async () => {
+async function compare(title, runs, kinds) {
+  for (let [name, fn] of Object.entries(kinds)) {
+    await mark(`${title} ${name}`, runs, fn);
+  }
+}
+
+(async () => {
   await polka.cryptoWaitReady();
-  const RAM = false;
   const BENCH = true;
-  if (RAM) utils.logMem();
   // This also works as cross-test
   console.log(`\x1b[36msr25519\x1b[0m`);
 
@@ -28,7 +32,7 @@ run(async () => {
   deepStrictEqual(pubOther, otherPairPolka.publicKey);
 
   if (BENCH) {
-    await compare('secretFromSeed', 1_000, {
+    await compare('secretFromSeed', 100_000, {
       wasm: () => polka.sr25519PairFromSeed(selfSeed),
       micro: () => sr25519.secretFromSeed(selfSeed),
     });
@@ -57,7 +61,7 @@ run(async () => {
   deepStrictEqual(hardPolka.publicKey, sr25519.getPublicKey(hardNoble));
 
   if (BENCH) {
-    await compare('HDKD.secretHard', 1_000, {
+    await compare('HDKD.secretHard', 50_000, {
       wasm: () => polka.sr25519DeriveHard(pair, cc),
       micro: () => sr25519.HDKD.secretHard(skSelf, cc),
     });
@@ -126,6 +130,4 @@ run(async () => {
       micro: () => sr25519.vrf.verify(msg, nobleVrfSig, pair.publicKey),
     });
   }
-
-  if (RAM) utils.logMem();
-});
+})();
