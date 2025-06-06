@@ -66,14 +66,19 @@ The library has not been independently audited yet. Use at your own risk.
 
 Low-level operations are done using noble-curves and noble-hashes.
 Consult their README for more information about constant-timeness, memory dumping and supply chain security.
+A few notes:
 
+- Bigints are used, which are not const-time, but our elliptic curve cryptography
+  implementation ensures algorithmic const-time for high-level items, which is more important
+- Secrets are zeroized, but this is pointless, since at some point they are converted to bigints,
+  and bigints cannot be zeroized in JS. Even zeroization of uint8arrays provides no guarantees.
 
 ## Speed
 
 Benchmark results on Apple M4:
 
 ```
-secretFromSeed x 493,827 ops/sec @ 2μs/op ± 1.37% (1μs..651μs)
+secretFromSeed x 493,827 ops/sec @ 2μs/op
 getSharedSecret x 1,135 ops/sec @ 880μs/op
 HDKD.secretHard x 54,121 ops/sec @ 18μs/op
 HDKD.secretSoft x 4,108 ops/sec @ 243μs/op
