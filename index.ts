@@ -41,6 +41,17 @@ function abytes(title: string, b: Uint8Array, ...lengths: number[]) {
       `${title}: Uint8Array expected of length ${lengths}, not of length=${b.length}`
     );
 }
+
+function checkU32(title: string, n: number) {
+  if (!Number.isSafeInteger(n) || n < 0 || n > 0xff_ff_ff_ff)
+    throw new Error(`${title}: wrong u32 integer: ${n}`);
+  return n;
+}
+
+function cleanBytes(...list: Uint8Array[]): void {
+  for (const t of list) t.fill(0);
+}
+
 const EMPTY = Uint8Array.of();
 const CURVE_ORDER = ed25519.CURVE.n;
 function parseScalar(title: string, bytes: Uint8Array) {
@@ -62,17 +73,9 @@ const Flags = {
   M: 1 << 4,
   K: 1 << 5,
 } as const;
-// const enum Flags {
-//   I = 1,
-//   A = 1 << 1,
-//   C = 1 << 2,
-//   T = 1 << 3,
-//   M = 1 << 4,
-//   K = 1 << 5,
-// }
-// TODO: this is very close to KeccakPRG, try to merge?
+
 // Differences: suffix, additional methods/flags
-export class Strobe128 {
+class Strobe128 {
   state: Uint8Array = new Uint8Array(200);
   state32: Uint32Array;
   pos: number = 0;
@@ -106,7 +109,6 @@ export class Strobe128 {
   // keccak.xof()
   private squeeze(len: number): Uint8Array {
     const data = new Uint8Array(len);
-    // TODO: optimize? we can do faster with u32a
     for (let i = 0; i < data.length; i++) {
       data[i] = this.state[this.pos];
       this.state[this.pos++] = 0;
@@ -115,7 +117,6 @@ export class Strobe128 {
     return data;
   }
   private overwrite(data: Uint8Array): void {
-    // TODO: optimize? we can do faster with u32a
     for (let i = 0; i < data.length; i++) {
       this.state[this.pos++] = data[i];
       if (this.pos === STROBE_R) this.runF();
@@ -164,12 +165,18 @@ export class Strobe128 {
     n.curFlags = this.curFlags;
     return n;
   }
+  clean(): void {
+    this.state.fill(0); // also clears state32, because same buffer
+    this.pos = 0;
+    this.curFlags = 0;
+    this.posBegin = 0;
+  }
 }
 // /STROBE128
 
 // Merlin
 // https://merlin.cool/index.html
-export class Merlin {
+class Merlin {
   strobe: Strobe128;
   constructor(label: Data) {
     this.strobe = new Strobe128('Merlin v1.0');
@@ -177,21 +184,23 @@ export class Merlin {
   }
   appendMessage(label: Data, message: Data): void {
     this.strobe.metaAD(label, false);
+    checkU32('Merlin.appendMessage', message.length);
     this.strobe.metaAD(numberToBytesLE(message.length, 4), true);
     this.strobe.AD(message, false);
   }
-  appendU64(label: Data, n: number | bigint): void {
-    this.appendMessage(label, numberToBytesLE(n, 8));
-  }
   challengeBytes(label: Data, len: number): Uint8Array {
     this.strobe.metaAD(label, false);
+    checkU32('Merlin.challengeBytes', len);
     this.strobe.metaAD(numberToBytesLE(len, 4), true);
     return this.strobe.PRF(len, false);
+  }
+  clean(): void {
+    this.strobe.clean();
   }
 }
 // /Merlin
 // Merlin signging context/transcript (sr25519 specific stuff, Merlin and Strobe are generic (but minimal))
-export class SigningContext extends Merlin {
+class SigningContext extends Merlin {
   private rng: RNG;
   constructor(name: string, rng: RNG = randomBytes) {
     super(name);
@@ -217,9 +226,11 @@ export class SigningContext extends Merlin {
     return modN(bytesToNumberLE(this.witnessBytes(label, 64, nonceSeeds)));
   }
   witnessBytes(label: Data, len: number, nonceSeeds: Uint8Array[] = []): Uint8Array {
+    checkU32('SigningContext.witnessBytes', len);
     const strobeRng = this.strobe.clone();
     for (const ns of nonceSeeds) {
       strobeRng.metaAD(label, false);
+      checkU32('SigningContext.witnessBytes nonce length', ns.length);
       strobeRng.metaAD(numberToBytesLE(ns.length, 4), true);
       strobeRng.KEY(ns, false);
     }
@@ -254,18 +265,21 @@ export function secretFromSeed(seed: Uint8Array): Uint8Array {
   // this will strip upper 3 bits and lower 3 bits
   const key = encodeScalar(decodeScalar(r.subarray(0, 32)));
   const nonce = r.subarray(32, 64);
-  return concatBytes(key, nonce);
+  const res = concatBytes(key, nonce);
+  cleanBytes(key, nonce, r);
+  return res;
 }
 // Seems like ed25519 keypair? Generates keypair from other keypair in ed25519 format
 // NOTE: not exported from wasm. Do we need this at all?
 export function fromKeypair(pair: Uint8Array): Uint8Array {
   abytes('keypair', pair, 96);
-  const sk = pair.slice(0, 32);
-  const nonce = pair.slice(32, 64);
-  const pubBytes = pair.slice(64, 96);
+  const sk = pair.subarray(0, 32);
+  const nonce = pair.subarray(32, 64);
+  const pubBytes = pair.subarray(64, 96);
   const key = encodeScalar(bytesToNumberLE(sk));
-  const realPub = getPublicKey(pair.slice(0, 64));
+  const realPub = getPublicKey(pair.subarray(0, 64));
   if (!equalBytes(pubBytes, realPub)) throw new Error('wrong public key');
+  // No need to clean since subarray's
   return concatBytes(key, nonce, realPub);
 }
 
@@ -293,15 +307,16 @@ export function sign(
   const s = modN(k * keyScalar + r);
   const res = concatBytes(R.toRawBytes(), numberToBytesLE(s, 32));
   res[63] |= 128; // add Schnorrkel marker
+  t.clean();
   return res;
 }
 export function verify(message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array): boolean {
   abytes('message', message);
   abytes('signature', signature, 64);
   abytes('publicKey', publicKey, 32);
-  if ((signature[63] & 128) === 0) throw new Error('Schnorrkel marker missing');
+  if ((signature[63] & 0b1000_0000) === 0) throw new Error('Schnorrkel marker missing');
   const sBytes = Uint8Array.from(signature.subarray(32, 64)); // copy before modification
-  sBytes[31] &= 127; // remove Schnorrkel marker
+  sBytes[31] &= 0b0111_1111; // remove Schnorrkel marker
   const R = RistrettoPoint.fromHex(signature.subarray(0, 32));
   const s = bytesToNumberLE(sBytes);
   aInRange('s', s, _0n, CURVE_ORDER); // Just in case, it will be checked at multiplication later
@@ -309,12 +324,15 @@ export function verify(message: Uint8Array, signature: Uint8Array, publicKey: Ui
   t.label(SUBSTRATE_CONTEXT);
   t.bytes(message);
   const pubPoint = RistrettoPoint.fromHex(publicKey);
+  if (pubPoint.equals(RistrettoPoint.ZERO)) return false;
   t.protoName('Schnorr-sig');
   t.commitPoint('sign:pk', pubPoint);
   t.commitPoint('sign:R', R);
   const k = t.challengeScalar('sign:c');
   const sP = RistrettoPoint.BASE.multiply(s);
   const RR = pubPoint.negate().multiply(k).add(sP);
+  t.clean();
+  cleanBytes(sBytes);
   return RR.equals(R);
 }
 export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): Uint8Array {
@@ -322,6 +340,7 @@ export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): U
   abytes('publicKey', publicKey, 32);
   const keyScalar = decodeScalar(secretKey.subarray(0, 32));
   const pubPoint = RistrettoPoint.fromHex(publicKey);
+  if (pubPoint.equals(RistrettoPoint.ZERO)) throw new Error('wrong public key (infinity)');
   return pubPoint.multiply(keyScalar).toRawBytes();
 }
 
@@ -342,13 +361,14 @@ export const HDKD: {
     t.appendMessage('chain-code', chainCode);
     t.commitPoint('public-key', pubPoint);
     const scalar = t.challengeScalar('HDKD-scalar');
-    t.challengeBytes('HDKD-chaincode', 32);
-    const nonce = t.witnessBytes('HDKD-nonce', 32, [
-      masterNonce,
-      concatBytes(numberToBytesLE(masterScalar, 32), masterNonce),
-    ]);
+    const hdkdChainCode = t.challengeBytes('HDKD-chaincode', 32);
+    const nonceSeed = concatBytes(numberToBytesLE(masterScalar, 32), masterNonce);
+    const nonce = t.witnessBytes('HDKD-nonce', 32, [masterNonce, nonceSeed]);
     const key = encodeScalar(modN(masterScalar + scalar));
-    return concatBytes(key, nonce);
+    const res = concatBytes(key, nonce);
+    cleanBytes(key, nonce, nonceSeed, hdkdChainCode);
+    t.clean();
+    return res;
   },
   publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
     abytes('publicKey', publicKey, 32);
@@ -360,6 +380,7 @@ export const HDKD: {
     t.commitPoint('public-key', pubPoint);
     const scalar = t.challengeScalar('HDKD-scalar');
     t.challengeBytes('HDKD-chaincode', 32);
+    t.clean();
     return pubPoint.add(RistrettoPoint.BASE.multiply(scalar)).toRawBytes();
   },
   secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
@@ -371,8 +392,12 @@ export const HDKD: {
     t.appendMessage('chain-code', chainCode);
     t.appendMessage('secret-key', key);
     const msk = t.challengeBytes('HDKD-hard', 32);
-    t.challengeBytes('HDKD-chaincode', 32);
-    return secretFromSeed(msk);
+    const hdkdChainCode = t.challengeBytes('HDKD-chaincode', 32);
+    t.clean();
+    const res = secretFromSeed(msk);
+    cleanBytes(key, msk, hdkdChainCode);
+    t.clean();
+    return res;
   },
 };
 // Schnorr DLEQ
@@ -400,6 +425,7 @@ const dleq = {
     return { proof: { c, s } as Proof, proofBatchable: { R, Hr, s } };
   },
   verify(pubPoint: Point, t: SigningContext, input: Point, output: Point, proof: Proof) {
+    if (pubPoint.equals(RistrettoPoint.ZERO)) return false;
     t.protoName('DLEQProof');
     t.commitPoint('vrf:h', input);
     const R = pubPoint.multiply(proof.c).add(RistrettoPoint.BASE.multiply(proof.s));
@@ -425,9 +451,12 @@ function initVRF(
   t.label(ctx);
   t.bytes(msg);
   t.commitPoint('vrf-nm-pk', pubPoint);
-  const input = RistrettoPoint.hashToCurve(t.challengeBytes('VRFHash', 64));
+  const hash = t.challengeBytes('VRFHash', 64);
+  const input = RistrettoPoint.hashToCurve(hash);
   const transcript = new SigningContext('VRF', rng);
   if (extra.length) transcript.label(extra);
+  t.clean();
+  cleanBytes(hash);
   return { input, t: transcript };
 }
 export const vrf: {
@@ -465,11 +494,11 @@ export const vrf: {
     const output = input.multiply(keyScalar);
     const p = { input, output };
     const { proof } = dleq.proove(keyScalar, nonce, pubPoint, t, input, output);
-    return concatBytes(
-      p.output.toRawBytes(),
-      numberToBytesLE(proof.c, 32),
-      numberToBytesLE(proof.s, 32)
-    );
+    const cBytes = numberToBytesLE(proof.c, 32);
+    const sBytes = numberToBytesLE(proof.s, 32);
+    const res = concatBytes(p.output.toRawBytes(), cBytes, sBytes);
+    cleanBytes(nonce, cBytes, sBytes);
+    return res;
   },
   verify(
     msg: Uint8Array,
@@ -485,6 +514,7 @@ export const vrf: {
     abytes('ctx', ctx);
     abytes('extra', extra);
     const pubPoint = RistrettoPoint.fromHex(publicKey);
+    if (pubPoint.equals(RistrettoPoint.ZERO)) return false;
     const proof: Proof = {
       c: parseScalar('signature.c', signature.subarray(32, 64)),
       s: parseScalar('signature.s', signature.subarray(64, 96)),
@@ -492,7 +522,7 @@ export const vrf: {
     const { input, t } = initVRF(ctx, msg, extra, pubPoint, rng);
     const output = RistrettoPoint.fromHex(signature.subarray(0, 32));
     if (output.equals(RistrettoPoint.ZERO))
-      throw new Error('vrf.verify: wrong public key (identity)');
+      throw new Error('vrf.verify: wrong output point (identity)');
     const proofBatchable = dleq.verify(pubPoint, t, input, output, proof);
     return proofBatchable === false ? false : true;
   },
