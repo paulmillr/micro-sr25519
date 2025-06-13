@@ -27,10 +27,10 @@
   "sideEffects": false,
   "author": "Paul Miller (https://paulmillr.com)",
   "license": "MIT",
-  "homepage": "https://github.com/paulmillr/micro-sr25519",
+  "homepage": "https://github.com/paulmillr/scure-sr25519",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/paulmillr/micro-sr25519.git"
+    "url": "git+https://github.com/paulmillr/scure-sr25519.git"
   },
   "scripts": {
     "build": "tsc",

@@ -1,6 +1,6 @@
-# micro-sr25519
+# scure-sr25519
 
-Minimal JS implementation of sr25519 cryptography for Polkadot.
+Audited & minimal JS implementation of sr25519 cryptography for Polkadot.
 
 - 🧜‍♂️ [sr25519 curve](https://wiki.polkadot.network/docs/learn-cryptography)
 - Schnorr signature on Ristretto compressed Ed25519
@@ -10,12 +10,32 @@ Minimal JS implementation of sr25519 cryptography for Polkadot.
   - **_NOTE_**: We implement only parts of these protocols which required for sr25519.
 - ➰ Uses [noble-curves](https://github.com/paulmillr/noble-curves) for underlying arithmetics
 
+### This library belongs to _scure_
+
+> **scure** — audited micro-libraries.
+
+- Zero or minimal dependencies
+- Highly readable TypeScript / JS code
+- PGP-signed releases and transparent NPM builds
+- Check out [homepage](https://paulmillr.com/noble/#scure) & all libraries:
+  [base](https://github.com/paulmillr/scure-base),
+  [bip32](https://github.com/paulmillr/scure-bip32),
+  [bip39](https://github.com/paulmillr/scure-bip39),
+  [btc-signer](https://github.com/paulmillr/scure-btc-signer),
+  [sr25519](https://github.com/paulmillr/scure-sr25519),
+  [starknet](https://github.com/paulmillr/scure-starknet)
+
 ## Usage
 
-> npm install micro-sr25519
+> `npm install @scure/sr25519`
+
+> `deno add jsr:@scure/sr25519`
+
+> `deno doc jsr:@scure/sr25519` # command-line documentation
+
 
 ```ts
-import * as sr25519 from 'micro-sr25519';
+import * as sr25519 from '@scure/sr25519';
 ```
 
 We support all major platforms and runtimes. For [Deno](https://deno.land), ensure to use
@@ -62,7 +82,15 @@ const isValid = sr25519.vrf.verify(msg, sig, pair.publicKey);
 
 ## Security
 
-The library has not been independently audited yet. Use at your own risk.
+The library has been independently audited:
+
+- at version 1.0.0, in Jun 2025, by [Oak Security](https://www.oaksecurity.io)
+  - PDFs: [website](https://github.com/oak-security/audit-reports/tree/6c41310a67bf892aad99504faa5dbfd74e3ca408/Edgeware), [in-repo 1](./audit/2025-06-12-oak-security-audit.pdf), [in-repo 2](./audit/2025-06-12-oak-security-fuzzing.pdf)
+  - [Changes since audit](https://github.com/paulmillr/scure-sr25519/compare/1.0.0..main)
+  - Scope: everything
+  - The audit has been funded by [Edgeware](https://www.edgeware.io)
+
+If you see anything unusual: investigate and report.
 
 Low-level operations are done using noble-curves and noble-hashes.
 Consult their README for more information about constant-timeness, memory dumping and supply chain security.

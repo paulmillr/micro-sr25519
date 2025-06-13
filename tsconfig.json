@@ -2,7 +2,7 @@
   "extends": "@paulmillr/jsbt/tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": "."
+    "outDir": "lib/esm"
   },
   "include": [
     "index.ts"
