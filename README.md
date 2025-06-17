@@ -38,8 +38,7 @@ Audited & minimal JS implementation of sr25519 cryptography for Polkadot.
 import * as sr25519 from '@scure/sr25519';
 ```
 
-We support all major platforms and runtimes. For [Deno](https://deno.land), ensure to use
-[npm specifier](https://deno.land/manual@v1.28.0/node/npm_specifiers).
+We support all major platforms and runtimes.
 
 ### Basic
 

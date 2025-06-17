@@ -7,7 +7,7 @@
  *
  * More: https://wiki.polkadot.network/docs/learn-cryptography.
  */
-import { mod } from '@noble/curves/abstract/modular';
+import { mod } from '@noble/curves/abstract/modular.js';
 import {
   aInRange,
   bitMask,
@@ -15,11 +15,11 @@ import {
   equalBytes,
   isBytes,
   numberToBytesLE,
-} from '@noble/curves/abstract/utils';
-import { ed25519, RistrettoPoint } from '@noble/curves/ed25519';
-import { keccakP } from '@noble/hashes/sha3';
-import { sha512 } from '@noble/hashes/sha512';
-import { concatBytes, randomBytes, u32, utf8ToBytes } from '@noble/hashes/utils';
+} from '@noble/curves/abstract/utils.js';
+import { ed25519, RistrettoPoint } from '@noble/curves/ed25519.js';
+import { keccakP } from '@noble/hashes/sha3.js';
+import { sha512 } from '@noble/hashes/sha512.js';
+import { concatBytes, randomBytes, u32, utf8ToBytes } from '@noble/hashes/utils.js';
 
 // prettier-ignore
 const _0n = BigInt(0), _3n = BigInt(3);
