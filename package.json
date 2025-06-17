@@ -51,7 +51,8 @@
     "strobe",
     "schnorr",
     "schnorrkel",
-    "ristretto"
+    "ristretto",
+    "ed25519"
   ],
   "funding": "https://paulmillr.com/funding/"
 }
