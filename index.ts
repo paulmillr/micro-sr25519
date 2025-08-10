@@ -8,6 +8,7 @@
  * More: https://wiki.polkadot.network/docs/learn-cryptography.
  */
 import { mod } from '@noble/curves/abstract/modular.js';
+import { ed25519, ristretto255, ristretto255_hasher } from '@noble/curves/ed25519.js';
 import {
   aInRange,
   bitMask,
@@ -15,18 +16,16 @@ import {
   equalBytes,
   isBytes,
   numberToBytesLE,
-} from '@noble/curves/abstract/utils.js';
-import { ed25519, RistrettoPoint } from '@noble/curves/ed25519.js';
+} from '@noble/curves/utils.js';
+import { sha512 } from '@noble/hashes/sha2.js';
 import { keccakP } from '@noble/hashes/sha3.js';
-import { sha512 } from '@noble/hashes/sha512.js';
 import { concatBytes, randomBytes, u32, utf8ToBytes } from '@noble/hashes/utils.js';
 
 // prettier-ignore
 const _0n = BigInt(0), _3n = BigInt(3);
-
-type Point = typeof RistrettoPoint.BASE;
+const RistrettoPoint = ristretto255.Point;
+type Point = typeof ristretto255.Point.BASE;
 type Data = string | Uint8Array;
-export type RNG = (bytes: number) => Uint8Array;
 
 function toData(d: Data): Uint8Array {
   if (typeof d === 'string') return utf8ToBytes(d);
@@ -53,7 +52,7 @@ function cleanBytes(...list: Uint8Array[]): void {
 }
 
 const EMPTY = Uint8Array.of();
-const CURVE_ORDER = ed25519.CURVE.n;
+const CURVE_ORDER = ed25519.Point.Fn.ORDER;
 function parseScalar(title: string, bytes: Uint8Array) {
   abytes(title, bytes, 32);
   const n = bytesToNumberLE(bytes);
@@ -201,10 +200,8 @@ class Merlin {
 // /Merlin
 // Merlin signging context/transcript (sr25519 specific stuff, Merlin and Strobe are generic (but minimal))
 class SigningContext extends Merlin {
-  private rng: RNG;
-  constructor(name: string, rng: RNG = randomBytes) {
+  constructor(name: string) {
     super(name);
-    this.rng = rng;
   }
   label(label: Data): void {
     this.appendMessage('', label);
@@ -222,10 +219,15 @@ class SigningContext extends Merlin {
   challengeScalar(label: Data): bigint {
     return modN(bytesToNumberLE(this.challengeBytes(label, 64)));
   }
-  witnessScalar(label: Data, nonceSeeds: Uint8Array[] = []): bigint {
-    return modN(bytesToNumberLE(this.witnessBytes(label, 64, nonceSeeds)));
+  witnessScalar(label: Data, random: Uint8Array, nonceSeeds: Uint8Array[] = []): bigint {
+    return modN(bytesToNumberLE(this.witnessBytes(label, 64, random, nonceSeeds)));
   }
-  witnessBytes(label: Data, len: number, nonceSeeds: Uint8Array[] = []): Uint8Array {
+  witnessBytes(
+    label: Data,
+    len: number,
+    random: Uint8Array,
+    nonceSeeds: Uint8Array[] = []
+  ): Uint8Array {
     checkU32('SigningContext.witnessBytes', len);
     const strobeRng = this.strobe.clone();
     for (const ns of nonceSeeds) {
@@ -234,7 +236,7 @@ class SigningContext extends Merlin {
       strobeRng.metaAD(numberToBytesLE(ns.length, 4), true);
       strobeRng.KEY(ns, false);
     }
-    const random = this.rng(32);
+    abytes('random', random, 32);
     strobeRng.metaAD('rng', false);
     strobeRng.KEY(random, false);
     strobeRng.metaAD(numberToBytesLE(len, 4), false);
@@ -253,7 +255,7 @@ const decodeScalar = (n: Uint8Array) => bytesToNumberLE(n) >> _3n;
 export function getPublicKey(secretKey: Uint8Array): Uint8Array {
   abytes('secretKey', secretKey, 64);
   const scalar = decodeScalar(secretKey.subarray(0, 32));
-  return RistrettoPoint.BASE.multiply(scalar).toRawBytes();
+  return RistrettoPoint.BASE.multiply(scalar).toBytes();
 }
 export function secretFromSeed(seed: Uint8Array): Uint8Array {
   abytes('seed', seed, 32);
@@ -288,11 +290,11 @@ const SUBSTRATE_CONTEXT = utf8ToBytes('substrate');
 export function sign(
   secretKey: Uint8Array,
   message: Uint8Array,
-  rng: RNG = randomBytes
+  random: Uint8Array = randomBytes(32)
 ): Uint8Array {
   abytes('message', message);
   abytes('secretKey', secretKey, 64);
-  const t = new SigningContext('SigningContext', rng);
+  const t = new SigningContext('SigningContext');
   t.label(SUBSTRATE_CONTEXT);
   t.bytes(message);
   const keyScalar = decodeScalar(secretKey.subarray(0, 32));
@@ -300,7 +302,7 @@ export function sign(
   const pubPoint = RistrettoPoint.fromBytes(getPublicKey(secretKey));
   t.protoName('Schnorr-sig');
   t.commitPoint('sign:pk', pubPoint);
-  const r = t.witnessScalar('signing', [nonce]);
+  const r = t.witnessScalar('signing', random, [nonce]);
   const R = RistrettoPoint.BASE.multiply(r);
   t.commitPoint('sign:R', R);
   const k = t.challengeScalar('sign:c');
@@ -346,24 +348,28 @@ export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): U
 
 // Derive
 export const HDKD: {
-  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng?: RNG): Uint8Array;
+  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, random?: Uint8Array): Uint8Array;
   publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
   secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
 } = {
-  secretSoft(secretKey: Uint8Array, chainCode: Uint8Array, rng: RNG = randomBytes): Uint8Array {
+  secretSoft(
+    secretKey: Uint8Array,
+    chainCode: Uint8Array,
+    random: Uint8Array = randomBytes(32)
+  ): Uint8Array {
     abytes('secretKey', secretKey, 64);
     abytes('chainCode', chainCode, 32);
     const masterScalar = decodeScalar(secretKey.subarray(0, 32));
     const masterNonce = secretKey.subarray(32, 64);
     const pubPoint = RistrettoPoint.fromBytes(getPublicKey(secretKey));
-    const t = new SigningContext('SchnorrRistrettoHDKD', rng);
+    const t = new SigningContext('SchnorrRistrettoHDKD');
     t.bytes(EMPTY);
     t.appendMessage('chain-code', chainCode);
     t.commitPoint('public-key', pubPoint);
     const scalar = t.challengeScalar('HDKD-scalar');
     const hdkdChainCode = t.challengeBytes('HDKD-chaincode', 32);
     const nonceSeed = concatBytes(numberToBytesLE(masterScalar, 32), masterNonce);
-    const nonce = t.witnessBytes('HDKD-nonce', 32, [masterNonce, nonceSeed]);
+    const nonce = t.witnessBytes('HDKD-nonce', 32, random, [masterNonce, nonceSeed]);
     const key = encodeScalar(modN(masterScalar + scalar));
     const res = concatBytes(key, nonce);
     cleanBytes(key, nonce, nonceSeed, hdkdChainCode);
@@ -409,11 +415,12 @@ const dleq = {
     pubPoint: Point,
     t: SigningContext,
     input: Point,
-    output: Point
+    output: Point,
+    random: Uint8Array
   ) {
     t.protoName('DLEQProof');
     t.commitPoint('vrf:h', input);
-    const r = t.witnessScalar(`proving${'\0'}0`, [nonce]);
+    const r = t.witnessScalar(`proving${'\0'}0`, random, [nonce]);
     const R = RistrettoPoint.BASE.multiply(r);
     t.commitPoint('vrf:R=g^r', R);
     const Hr = input.multiply(r);
@@ -439,21 +446,16 @@ const dleq = {
     return false;
   },
 };
+
 // VRF: Verifiable Random Function
-function initVRF(
-  ctx: Uint8Array,
-  msg: Uint8Array,
-  extra: Uint8Array,
-  pubPoint: Point,
-  rng: RNG = randomBytes
-) {
-  const t = new SigningContext('SigningContext', rng);
+function initVRF(ctx: Uint8Array, msg: Uint8Array, extra: Uint8Array, pubPoint: Point) {
+  const t = new SigningContext('SigningContext');
   t.label(ctx);
   t.bytes(msg);
   t.commitPoint('vrf-nm-pk', pubPoint);
   const hash = t.challengeBytes('VRFHash', 64);
-  const input = RistrettoPoint.hashToCurve(hash);
-  const transcript = new SigningContext('VRF', rng);
+  const input = ristretto255_hasher.deriveToCurve!(hash);
+  const transcript = new SigningContext('VRF');
   if (extra.length) transcript.label(extra);
   t.clean();
   cleanBytes(hash);
@@ -465,15 +467,14 @@ export const vrf: {
     secretKey: Uint8Array,
     ctx: Uint8Array,
     extra: Uint8Array,
-    rng: RNG
+    radomBytes?: Uint8Array
   ): Uint8Array;
   verify(
     msg: Uint8Array,
     signature: Uint8Array,
     publicKey: Uint8Array,
     ctx?: Uint8Array,
-    extra?: Uint8Array,
-    rng?: RNG
+    extra?: Uint8Array
   ): boolean;
 } = {
   sign(
@@ -481,7 +482,7 @@ export const vrf: {
     secretKey: Uint8Array,
     ctx: Uint8Array = EMPTY,
     extra: Uint8Array = EMPTY,
-    rng: RNG = randomBytes
+    random: Uint8Array = randomBytes(32)
   ): Uint8Array {
     abytes('msg', msg);
     abytes('secretKey', secretKey, 64);
@@ -490,10 +491,10 @@ export const vrf: {
     const keyScalar = decodeScalar(secretKey.subarray(0, 32));
     const nonce = secretKey.subarray(32, 64);
     const pubPoint = RistrettoPoint.fromBytes(getPublicKey(secretKey));
-    const { input, t } = initVRF(ctx, msg, extra, pubPoint, rng);
+    const { input, t } = initVRF(ctx, msg, extra, pubPoint);
     const output = input.multiply(keyScalar);
     const p = { input, output };
-    const { proof } = dleq.proove(keyScalar, nonce, pubPoint, t, input, output);
+    const { proof } = dleq.proove(keyScalar, nonce, pubPoint, t, input, output, random);
     const cBytes = numberToBytesLE(proof.c, 32);
     const sBytes = numberToBytesLE(proof.s, 32);
     const res = concatBytes(p.output.toBytes(), cBytes, sBytes);
@@ -505,8 +506,7 @@ export const vrf: {
     signature: Uint8Array,
     publicKey: Uint8Array,
     ctx: Uint8Array = EMPTY,
-    extra: Uint8Array = EMPTY,
-    rng: RNG = randomBytes
+    extra: Uint8Array = EMPTY
   ): boolean {
     abytes('msg', msg);
     abytes('signature', signature, 96); // O(point) || c(scalar) || s(scalar)
@@ -519,7 +519,7 @@ export const vrf: {
       c: parseScalar('signature.c', signature.subarray(32, 64)),
       s: parseScalar('signature.s', signature.subarray(64, 96)),
     };
-    const { input, t } = initVRF(ctx, msg, extra, pubPoint, rng);
+    const { input, t } = initVRF(ctx, msg, extra, pubPoint);
     const output = RistrettoPoint.fromBytes(signature.subarray(0, 32));
     if (output.equals(RistrettoPoint.ZERO))
       throw new Error('vrf.verify: wrong output point (identity)');
