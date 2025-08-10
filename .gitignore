@@ -4,3 +4,4 @@ node_modules/
 /*.js
 /*.d.ts
 /*.map
+/test/compiled
