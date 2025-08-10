@@ -217,7 +217,7 @@ class SigningContext extends Merlin {
     this.appendMessage('proto-name', label);
   }
   commitPoint(label: Data, point: Point): void {
-    this.appendMessage(label, point.toRawBytes());
+    this.appendMessage(label, point.toBytes());
   }
   challengeScalar(label: Data): bigint {
     return modN(bytesToNumberLE(this.challengeBytes(label, 64)));
@@ -297,7 +297,7 @@ export function sign(
   t.bytes(message);
   const keyScalar = decodeScalar(secretKey.subarray(0, 32));
   const nonce = secretKey.subarray(32, 64);
-  const pubPoint = RistrettoPoint.fromHex(getPublicKey(secretKey));
+  const pubPoint = RistrettoPoint.fromBytes(getPublicKey(secretKey));
   t.protoName('Schnorr-sig');
   t.commitPoint('sign:pk', pubPoint);
   const r = t.witnessScalar('signing', [nonce]);
@@ -305,7 +305,7 @@ export function sign(
   t.commitPoint('sign:R', R);
   const k = t.challengeScalar('sign:c');
   const s = modN(k * keyScalar + r);
-  const res = concatBytes(R.toRawBytes(), numberToBytesLE(s, 32));
+  const res = concatBytes(R.toBytes(), numberToBytesLE(s, 32));
   res[63] |= 128; // add Schnorrkel marker
   t.clean();
   return res;
@@ -317,13 +317,13 @@ export function verify(message: Uint8Array, signature: Uint8Array, publicKey: Ui
   if ((signature[63] & 0b1000_0000) === 0) throw new Error('Schnorrkel marker missing');
   const sBytes = Uint8Array.from(signature.subarray(32, 64)); // copy before modification
   sBytes[31] &= 0b0111_1111; // remove Schnorrkel marker
-  const R = RistrettoPoint.fromHex(signature.subarray(0, 32));
+  const R = RistrettoPoint.fromBytes(signature.subarray(0, 32));
   const s = bytesToNumberLE(sBytes);
   aInRange('s', s, _0n, CURVE_ORDER); // Just in case, it will be checked at multiplication later
   const t = new SigningContext('SigningContext');
   t.label(SUBSTRATE_CONTEXT);
   t.bytes(message);
-  const pubPoint = RistrettoPoint.fromHex(publicKey);
+  const pubPoint = RistrettoPoint.fromBytes(publicKey);
   if (pubPoint.equals(RistrettoPoint.ZERO)) return false;
   t.protoName('Schnorr-sig');
   t.commitPoint('sign:pk', pubPoint);
@@ -339,9 +339,9 @@ export function getSharedSecret(secretKey: Uint8Array, publicKey: Uint8Array): U
   abytes('secretKey', secretKey, 64);
   abytes('publicKey', publicKey, 32);
   const keyScalar = decodeScalar(secretKey.subarray(0, 32));
-  const pubPoint = RistrettoPoint.fromHex(publicKey);
+  const pubPoint = RistrettoPoint.fromBytes(publicKey);
   if (pubPoint.equals(RistrettoPoint.ZERO)) throw new Error('wrong public key (infinity)');
-  return pubPoint.multiply(keyScalar).toRawBytes();
+  return pubPoint.multiply(keyScalar).toBytes();
 }
 
 // Derive
@@ -355,7 +355,7 @@ export const HDKD: {
     abytes('chainCode', chainCode, 32);
     const masterScalar = decodeScalar(secretKey.subarray(0, 32));
     const masterNonce = secretKey.subarray(32, 64);
-    const pubPoint = RistrettoPoint.fromHex(getPublicKey(secretKey));
+    const pubPoint = RistrettoPoint.fromBytes(getPublicKey(secretKey));
     const t = new SigningContext('SchnorrRistrettoHDKD', rng);
     t.bytes(EMPTY);
     t.appendMessage('chain-code', chainCode);
@@ -373,7 +373,7 @@ export const HDKD: {
   publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
     abytes('publicKey', publicKey, 32);
     abytes('chainCode', chainCode, 32);
-    const pubPoint = RistrettoPoint.fromHex(publicKey);
+    const pubPoint = RistrettoPoint.fromBytes(publicKey);
     const t = new SigningContext('SchnorrRistrettoHDKD');
     t.bytes(EMPTY);
     t.appendMessage('chain-code', chainCode);
@@ -381,7 +381,7 @@ export const HDKD: {
     const scalar = t.challengeScalar('HDKD-scalar');
     t.challengeBytes('HDKD-chaincode', 32);
     t.clean();
-    return pubPoint.add(RistrettoPoint.BASE.multiply(scalar)).toRawBytes();
+    return pubPoint.add(RistrettoPoint.BASE.multiply(scalar)).toBytes();
   },
   secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
     abytes('secretKey', secretKey, 64);
@@ -489,14 +489,14 @@ export const vrf: {
     abytes('extra', extra);
     const keyScalar = decodeScalar(secretKey.subarray(0, 32));
     const nonce = secretKey.subarray(32, 64);
-    const pubPoint = RistrettoPoint.fromHex(getPublicKey(secretKey));
+    const pubPoint = RistrettoPoint.fromBytes(getPublicKey(secretKey));
     const { input, t } = initVRF(ctx, msg, extra, pubPoint, rng);
     const output = input.multiply(keyScalar);
     const p = { input, output };
     const { proof } = dleq.proove(keyScalar, nonce, pubPoint, t, input, output);
     const cBytes = numberToBytesLE(proof.c, 32);
     const sBytes = numberToBytesLE(proof.s, 32);
-    const res = concatBytes(p.output.toRawBytes(), cBytes, sBytes);
+    const res = concatBytes(p.output.toBytes(), cBytes, sBytes);
     cleanBytes(nonce, cBytes, sBytes);
     return res;
   },
@@ -513,14 +513,14 @@ export const vrf: {
     abytes('pubkey', publicKey, 32);
     abytes('ctx', ctx);
     abytes('extra', extra);
-    const pubPoint = RistrettoPoint.fromHex(publicKey);
+    const pubPoint = RistrettoPoint.fromBytes(publicKey);
     if (pubPoint.equals(RistrettoPoint.ZERO)) return false;
     const proof: Proof = {
       c: parseScalar('signature.c', signature.subarray(32, 64)),
       s: parseScalar('signature.s', signature.subarray(64, 96)),
     };
     const { input, t } = initVRF(ctx, msg, extra, pubPoint, rng);
-    const output = RistrettoPoint.fromHex(signature.subarray(0, 32));
+    const output = RistrettoPoint.fromBytes(signature.subarray(0, 32));
     if (output.equals(RistrettoPoint.ZERO))
       throw new Error('vrf.verify: wrong output point (identity)');
     const proofBatchable = dleq.verify(pubPoint, t, input, output, proof);
