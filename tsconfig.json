@@ -1,10 +1,8 @@
 {
-  "extends": "@paulmillr/jsbt/tsconfig.esm.json",
+  "extends": "@paulmillr/jsbt/tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "outDir": "lib/esm",
-    "module": "es2020",
-    "moduleResolution": "bundler"
+    "outDir": "."
   },
   "include": [
     "index.ts"

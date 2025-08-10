@@ -1,12 +1,11 @@
-import * as ed25519 from '@noble/curves/ed25519';
-import * as sr25519 from '../lib/esm/index.js';
-
-import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
+import * as ed25519 from '@noble/curves/ed25519.js';
+import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
 import { describe, should } from 'micro-should';
 import { deepStrictEqual, notDeepStrictEqual, throws } from 'node:assert';
+import * as sr25519 from '../index.ts';
 
-const { Strobe128, Merlin, SigningContext } = sr25519.__tests;
-const ZeroRNG = (n) => new Uint8Array(n);
+const { Strobe128, SigningContext } = sr25519.__tests;
+const RistrettoPoint = ed25519.ristretto255.Point;
 
 describe('sr25519', () => {
   describe('utils', () => {
@@ -39,7 +38,7 @@ describe('sr25519', () => {
     });
     should('SigningContext', () => {
       // This is for merlin test
-      const t = new SigningContext('SigningContext', ZeroRNG);
+      const t = new SigningContext('SigningContext');
       t.label('substrate');
       t.bytes(utf8ToBytes('this is a message'));
       deepStrictEqual(
@@ -83,7 +82,7 @@ describe('sr25519', () => {
       deepStrictEqual(t.strobe.posBegin, 111);
       deepStrictEqual(t.strobe.curFlags, 2);
 
-      const pub = ed25519.RistrettoPoint.fromHex(
+      const pub = RistrettoPoint.fromBytes(
         new Uint8Array([
           70, 235, 221, 239, 140, 217, 187, 22, 125, 195, 8, 120, 215, 17, 59, 126, 22, 142, 111, 6,
           70, 190, 255, 215, 125, 105, 211, 155, 173, 118, 180, 122,
@@ -114,7 +113,7 @@ describe('sr25519', () => {
         253, 25, 12, 206, 116, 223, 53, 100, 50, 180, 16, 189, 100, 104, 35, 9, 214, 222, 219, 39,
         199, 104, 69, 218, 243, 136, 85, 124, 186, 195, 202, 52,
       ]);
-      const r = t.witnessScalar('signing', [nonce]);
+      const r = t.witnessScalar('signing', new Uint8Array(32), [nonce]);
       deepStrictEqual(
         r,
         4917907422413454981120839959394883085636993534673566917378047043755653218809n
@@ -139,7 +138,7 @@ describe('sr25519', () => {
       deepStrictEqual(t.strobe.posBegin, 0);
       deepStrictEqual(t.strobe.curFlags, 2);
 
-      t.commitPoint('sign:R', ed25519.RistrettoPoint.BASE.multiply(r));
+      t.commitPoint('sign:R', RistrettoPoint.BASE.multiply(r));
       deepStrictEqual(
         t.strobe.state,
         new Uint8Array([
@@ -197,7 +196,7 @@ describe('sr25519', () => {
     const input = hexToBytes('fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e');
     const secretKey = sr25519.secretFromSeed(input);
     const publicKey = sr25519.getPublicKey(secretKey);
-    const signature = sr25519.sign(secretKey, utf8ToBytes('this is a message'), ZeroRNG);
+    const signature = sr25519.sign(secretKey, utf8ToBytes('this is a message'), new Uint8Array(32));
     deepStrictEqual(sr25519.getPublicKey(secretKey), publicKey);
     deepStrictEqual(
       signature,
@@ -234,7 +233,7 @@ describe('sr25519', () => {
     const publicKey = sr25519.getPublicKey(secretKey);
     deepStrictEqual(sr25519.getPublicKey(secretKey), publicKey);
     const message = utf8ToBytes('this is a message');
-    const signature = sr25519.sign(secretKey, message, ZeroRNG);
+    const signature = sr25519.sign(secretKey, message, new Uint8Array(32));
     deepStrictEqual(sr25519.verify(message, signature, publicKey), true);
     const signature2 = sr25519.sign(secretKey, message);
     deepStrictEqual(sr25519.verify(message, signature2, publicKey), true);
@@ -291,7 +290,7 @@ describe('sr25519', () => {
       const cc = hexToBytes('0c666f6f00000000000000000000000000000000000000000000000000000000'); // foo
       const seed = hexToBytes('fac7959dbfe72f052e5a0c3c8d6530f202b02fd8f9f5ca3580ec8deb7797479e');
       const masterSecret = sr25519.secretFromSeed(seed);
-      const secretKey = sr25519.HDKD.secretSoft(masterSecret, cc, ZeroRNG);
+      const secretKey = sr25519.HDKD.secretSoft(masterSecret, cc, new Uint8Array(32));
       const publicKey = sr25519.getPublicKey(secretKey);
       deepStrictEqual(
         bytesToHex(publicKey),
@@ -344,7 +343,7 @@ describe('sr25519', () => {
     const msg = utf8ToBytes('this is a message');
     const extra = utf8ToBytes('extra param');
     should('basic', () => {
-      const sig = sr25519.vrf.sign(msg, priv, ctx, extra, ZeroRNG);
+      const sig = sr25519.vrf.sign(msg, priv, ctx, extra, new Uint8Array(32));
       deepStrictEqual(
         bytesToHex(sig.subarray(0, 32)),
         'a0eb55b1e206d16625d36987f6a9d16fce4190e427d017dbfad583ab7838e54b'
