@@ -24,7 +24,6 @@
     "build": "tsc",
     "build:release": "npx --no @paulmillr/jsbt esbuild test/build",
     "bench": "cd test/benchmark; npm i; node index.ts",
-    "lint": "prettier --check index.ts 'test/**/*.{js,ts}'",
     "format": "prettier --write index.ts 'test/**/*.{js,ts}'",
     "test": "node test/index.ts",
     "test:bun": "bun test/index.ts",
