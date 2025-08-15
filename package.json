@@ -4,6 +4,7 @@
   "description": "Audited & minimal implementation of sr25519 (polkadot) cryptography, with Merlin and Strobe",
   "files": [
     "index.js",
+    "index.js.map",
     "index.d.ts",
     "index.d.ts.map",
     "index.ts"
@@ -14,10 +15,10 @@
   },
   "devDependencies": {
     "@paulmillr/jsbt": "0.4.1",
-    "micro-bmark": "0.4.1",
+    "micro-bmark": "0.4.2",
     "micro-should": "0.5.3",
-    "prettier": "3.5.2",
-    "typescript": "5.8.3"
+    "prettier": "3.6.2",
+    "typescript": "5.9.2"
   },
   "scripts": {
     "build": "tsc",
@@ -33,17 +34,6 @@
   "engines": {
     "node": ">= 20.19.0"
   },
-  "type": "module",
-  "main": "index.js",
-  "module": "index.js",
-  "sideEffects": false,
-  "author": "Paul Miller (https://paulmillr.com)",
-  "license": "MIT",
-  "homepage": "https://github.com/paulmillr/scure-sr25519",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/paulmillr/scure-sr25519.git"
-  },
   "keywords": [
     "sr25519",
     "polkadot",
@@ -54,5 +44,17 @@
     "ristretto",
     "ed25519"
   ],
-  "funding": "https://paulmillr.com/funding/"
+  "homepage": "https://paulmillr.com/noble/#scure",
+  "funding": "https://paulmillr.com/funding/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulmillr/scure-sr25519.git"
+  },
+  "type": "module",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "sideEffects": false,
+  "author": "Paul Miller (https://paulmillr.com)",
+  "license": "MIT"
 }
