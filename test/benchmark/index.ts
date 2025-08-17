@@ -1,8 +1,8 @@
-import { mark } from 'micro-bmark';
 import { hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
-import * as sr25519 from '../../lib/esm/index.js';
 import * as polka from '@polkadot/util-crypto';
 import { deepStrictEqual } from 'assert';
+import { mark } from 'micro-bmark';
+import * as sr25519 from '../../index.ts';
 
 async function compare(title, runs, kinds) {
   for (let [name, fn] of Object.entries(kinds)) {
@@ -34,7 +34,7 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('secretFromSeed', 100_000, {
       wasm: () => polka.sr25519PairFromSeed(selfSeed),
-      micro: () => sr25519.secretFromSeed(selfSeed),
+      scure: () => sr25519.secretFromSeed(selfSeed),
     });
   }
 
@@ -48,7 +48,7 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('getSharedSecret', 1_000, {
       wasm: () => polka.sr25519Agreement(skSelf, pubOther),
-      micro: () => sr25519.getSharedSecret(skSelf, pubOther),
+      scure: () => sr25519.getSharedSecret(skSelf, pubOther),
     });
   }
 
@@ -63,7 +63,7 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('HDKD.secretHard', 50_000, {
       wasm: () => polka.sr25519DeriveHard(pair, cc),
-      micro: () => sr25519.HDKD.secretHard(skSelf, cc),
+      scure: () => sr25519.HDKD.secretHard(skSelf, cc),
     });
   }
 
@@ -77,7 +77,7 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('HDKD.secretSoft', 1_000, {
       wasm: () => polka.sr25519DeriveSoft(pair, cc),
-      micro: () => sr25519.HDKD.secretSoft(skSelf, cc),
+      scure: () => sr25519.HDKD.secretSoft(skSelf, cc),
     });
   }
 
@@ -89,7 +89,7 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('HDKD.publicSoft', 1_000, {
       wasm: () => polka.sr25519DerivePublic(pubSelf, cc),
-      micro: () => sr25519.HDKD.publicSoft(pubSelf, cc),
+      scure: () => sr25519.HDKD.publicSoft(pubSelf, cc),
     });
   }
 
@@ -104,11 +104,11 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('sign', 1_000, {
       wasm: () => polka.sr25519Sign(msg, pair),
-      micro: () => sr25519.sign(pair.secretKey, msg),
+      scure: () => sr25519.sign(pair.secretKey, msg),
     });
     await compare('verify', 1_000, {
       wasm: () => polka.sr25519Verify(msg, nobleSig, pair.publicKey),
-      micro: () => sr25519.verify(msg, nobleSig, pair.publicKey),
+      scure: () => sr25519.verify(msg, nobleSig, pair.publicKey),
     });
   }
   // VRF
@@ -123,11 +123,11 @@ async function compare(title, runs, kinds) {
   if (BENCH) {
     await compare('vrfSign', 1_000, {
       wasm: () => polka.sr25519VrfSign(msg, pair),
-      micro: () => sr25519.vrf.sign(msg, pair.secretKey),
+      scure: () => sr25519.vrf.sign(msg, pair.secretKey),
     });
     await compare('vrfVerify', 1_000, {
       wasm: () => polka.sr25519VrfVerify(msg, polkaVrfSig, pair.publicKey),
-      micro: () => sr25519.vrf.verify(msg, nobleVrfSig, pair.publicKey),
+      scure: () => sr25519.vrf.verify(msg, nobleVrfSig, pair.publicKey),
     });
   }
 })();

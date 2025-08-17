@@ -31,18 +31,12 @@ Audited & minimal JS implementation of sr25519 cryptography for Polkadot.
 
 > `deno add jsr:@scure/sr25519`
 
-> `deno doc jsr:@scure/sr25519` # command-line documentation
-
-
-```ts
-import * as sr25519 from '@scure/sr25519';
-```
-
 We support all major platforms and runtimes.
 
 ### Basic
 
 ```ts
+import * as sr25519 from '@scure/sr25519';
 const signature = sr25519.sign(pair.secretKey, msg);
 const isValid = sr25519.verify(msg, polkaSig, pair.publicKey);
 const secretKey = sr25519.secretFromSeed(seed);
