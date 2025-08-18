@@ -352,11 +352,7 @@ export const HDKD: {
   publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
   secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array;
 } = {
-  secretSoft(
-    secretKey: Uint8Array,
-    chainCode: Uint8Array,
-    random: Uint8Array = randomBytes(32)
-  ): Uint8Array {
+  secretSoft(secretKey, chainCode, random = randomBytes(32)) {
     abytes('secretKey', secretKey, 64);
     abytes('chainCode', chainCode, 32);
     const masterScalar = decodeScalar(secretKey.subarray(0, 32));
@@ -376,7 +372,7 @@ export const HDKD: {
     t.clean();
     return res;
   },
-  publicSoft(publicKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
+  publicSoft(publicKey, chainCode) {
     abytes('publicKey', publicKey, 32);
     abytes('chainCode', chainCode, 32);
     const pubPoint = RistrettoPoint.fromBytes(publicKey);
@@ -389,7 +385,7 @@ export const HDKD: {
     t.clean();
     return pubPoint.add(RistrettoPoint.BASE.multiply(scalar)).toBytes();
   },
-  secretHard(secretKey: Uint8Array, chainCode: Uint8Array): Uint8Array {
+  secretHard(secretKey, chainCode) {
     abytes('secretKey', secretKey, 64);
     abytes('chainCode', chainCode, 32);
     const key = numberToBytesLE(decodeScalar(secretKey.subarray(0, 32)), 32);
@@ -461,13 +457,13 @@ function initVRF(ctx: Uint8Array, msg: Uint8Array, extra: Uint8Array, pubPoint: 
   cleanBytes(hash);
   return { input, t: transcript };
 }
-export const vrf: {
+type VRF = {
   sign(
     msg: Uint8Array,
     secretKey: Uint8Array,
     ctx: Uint8Array,
     extra: Uint8Array,
-    radomBytes?: Uint8Array
+    random?: Uint8Array
   ): Uint8Array;
   verify(
     msg: Uint8Array,
@@ -476,14 +472,9 @@ export const vrf: {
     ctx?: Uint8Array,
     extra?: Uint8Array
   ): boolean;
-} = {
-  sign(
-    msg: Uint8Array,
-    secretKey: Uint8Array,
-    ctx: Uint8Array = EMPTY,
-    extra: Uint8Array = EMPTY,
-    random: Uint8Array = randomBytes(32)
-  ): Uint8Array {
+};
+export const vrf: VRF = {
+  sign(msg, secretKey, ctx = EMPTY, extra = EMPTY, random = randomBytes(32)) {
     abytes('msg', msg);
     abytes('secretKey', secretKey, 64);
     abytes('ctx', ctx);
@@ -501,13 +492,7 @@ export const vrf: {
     cleanBytes(nonce, cBytes, sBytes);
     return res;
   },
-  verify(
-    msg: Uint8Array,
-    signature: Uint8Array,
-    publicKey: Uint8Array,
-    ctx: Uint8Array = EMPTY,
-    extra: Uint8Array = EMPTY
-  ): boolean {
+  verify(msg, signature, publicKey, ctx = EMPTY, extra = EMPTY): boolean {
     abytes('msg', msg);
     abytes('signature', signature, 96); // O(point) || c(scalar) || s(scalar)
     abytes('pubkey', publicKey, 32);
