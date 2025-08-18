@@ -1,6 +1,6 @@
 import * as ed25519 from '@noble/curves/ed25519.js';
 import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
-import { describe, should } from 'micro-should';
+import { describe, should } from '@paulmillr/jsbt/test.js';
 import { deepStrictEqual, notDeepStrictEqual, throws } from 'node:assert';
 import * as sr25519 from '../index.ts';
 

@@ -1,7 +1,7 @@
 import { hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
+import { mark } from '@paulmillr/jsbt/bench.js';
 import * as polka from '@polkadot/util-crypto';
 import { deepStrictEqual } from 'assert';
-import { mark } from 'micro-bmark';
 import * as sr25519 from '../../index.ts';
 
 async function compare(title, runs, kinds) {
