@@ -77,11 +77,11 @@ const isValid = sr25519.vrf.verify(msg, sig, pair.publicKey);
 
 The library has been independently audited:
 
-- at version 1.0.0, in Jun 2025, by [Oak Security](https://www.oaksecurity.io)
-  - PDFs: [website](https://github.com/oak-security/audit-reports/tree/6c41310a67bf892aad99504faa5dbfd74e3ca408/Edgeware), [in-repo 1](./audit/2025-06-12-oak-security-audit.pdf), [in-repo 2](./audit/2025-06-12-oak-security-fuzzing.pdf)
-  - [Changes since audit](https://github.com/paulmillr/scure-sr25519/compare/1.0.0..main)
+- at version 0.3.0, in Aug 2025, by [Oak Security](https://www.oaksecurity.io)
+  - PDFs: [website](https://github.com/oak-security/audit-reports/tree/8f30dd4b59eae97194fb612aa8e773824a37bf65/Polkadot), [2025-08-22](./audit/2025-08-22-oak-security-audit.pdf), [2025-06-12](./audit/2025-06-12-oak-security-audit.pdf), [2025-06-12-fuzz](./audit/2025-06-12-oak-security-fuzzing.pdf)
+  - [Changes since audit](https://github.com/paulmillr/scure-sr25519/compare/0.3.0..main)
   - Scope: everything
-  - The audit has been funded by [Edgeware](https://www.edgeware.io)
+  - The audit has been funded by Polkadot, coordinated by [Edgeware](https://www.edgeware.io)
 
 If you see anything unusual: investigate and report.
 
