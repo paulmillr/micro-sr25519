@@ -1,10 +1,10 @@
 {
   "name": "@scure/sr25519",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "exports": "./index.ts",
   "imports": {
-    "@noble/curves": "jsr:@noble/curves@~1.9.0",
-    "@noble/hashes": "jsr:@noble/hashes@~1.8.0"
+    "@noble/curves": "jsr:@noble/curves@~2.0.0",
+    "@noble/hashes": "jsr:@noble/hashes@~2.0.0"
   },
   "publish": {
     "include": [
